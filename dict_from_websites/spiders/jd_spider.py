@@ -4,9 +4,9 @@ import PyV8
 import json
 from openpyxl import Workbook, load_workbook
 
-#import sys
-#reload(sys)
-#sys.setdefaultencoding('utf-8')
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 import scrapy
 
@@ -31,7 +31,7 @@ class JDSpider(scrapy.Spider):
                 u'家具', u'家装', u'厨具', u'男装', u'女装', u'童装', u'内衣', 
                 u'美妆个护', u'宠物', u'女鞋', u'箱包', u'钟表', u'珠宝', u'男鞋',
                 u'运动', u'户外', u'汽车', u'汽车用品', u'母婴', u'玩具乐器',
-                u'食品', u'酒类', u'生鲜', u'礼品鲜花']:
+                u'食品', u'酒类', u'生鲜', u'礼品鲜花', u'医药保健',]:
             cate_url = dict_cate_name_and_url[cate_name]
             #print cate_name, cate_url
 
@@ -94,9 +94,51 @@ class JDSpider(scrapy.Spider):
                 yield scrapy.Request(url=cate_url, callback=self.crawlingJiu)
             if cate_name == u'生鲜':
                 yield scrapy.Request(url=cate_url, callback=self.crawlingFresh)
-            """
             if cate_name == u'礼品鲜花':
                 yield scrapy.Request(url=cate_url, callback=self.crawlingGiftandFlowers)
+            """
+            if cate_name == u'医药保健':
+                yield scrapy.Request(url=cate_url, callback=self.crawlingHealth)
+
+
+    def crawlingHealth(self, response):
+        """医药保健"""
+        body = response.body.decode('gbk', 'ignore')
+        start_strings = "window.channelData['floor-firstscreen']"
+        end_strings = "})(window);"
+        start_index = body.index(start_strings)
+        needed_content = body[start_index:]
+        end_index = needed_content.index(end_strings)
+        needed_content = needed_content[:end_index].strip()
+        needed_content = needed_content.replace(' ', '').replace('\n', ''
+                ).replace('\t', '')
+        needed_content = "var d" + needed_content[len(start_strings):]
+#        print needed_content[:100]
+#        print needed_content[-100:]
+
+        wb = load_workbook(self.path_to_write)
+        try:
+            wb.remove_sheet(wb[u'医药保健'])
+        except Exception, e:
+            pass
+        ws = wb.create_sheet(title=u'医药保健')
+
+        pv = PyV8.JSContext()
+        pv.enter()
+        # 将JS [object Object] 转化为json格式
+        pv.eval(needed_content + "var json_data = JSON.stringify(d);")
+        # 再将json格式转换为python字典格式
+        dict_content = json.loads(pv.locals.json_data)
+#        print dict_content.keys()
+
+        for i,c1 in enumerate(dict_content['menu']):
+#            print c1['NAME']
+            for c2 in c1['children']:
+#                print '\t', c2['NAME']
+                list_to_write = [i+1, c1['NAME'], c2['NAME'],]
+#                print list_to_write
+                ws.append(list_to_write)
+        wb.save(self.path_to_write)
 
 
     def crawlingGiftandFlowers(self, response):
