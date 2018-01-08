@@ -14,6 +14,13 @@ class JDSpider(scrapy.Spider):
     name = 'jd_spider'
     path_to_write = 'data/dict_from_jd.xlsx'
 
+    def __init__(self):
+        try:
+            wb = load_workbook(self.path_to_write)
+        except Exception, e:
+            wb = Workbook()
+	    wb.save(self.path_to_write)
+
     def start_requests(self):
         list_urls = ['https://www.jd.com',]
         for url in list_urls:
@@ -24,81 +31,31 @@ class JDSpider(scrapy.Spider):
             list_cate_name = sel.xpath("li/a/text()").extract()
             list_cate_url = sel.xpath("li/a/@href").extract()
             list_cate_url = ['https:'+i for i in list_cate_url]
-        dict_cate_name_and_url = dict(zip(list_cate_name, list_cate_url))
+        dict_cate_and_url = dict(zip(list_cate_name, list_cate_url))
 
-        #for cate_name in dict_cate_name_and_url.keys():
-        for cate_name in [u'家用电器', u'手机', u'数码', u'电脑', u'办公', u'家居',
+	list_cate = [u'家用电器', u'手机', u'数码', u'电脑', u'办公', u'家居',
                 u'家具', u'家装', u'厨具', u'男装', u'女装', u'童装', u'内衣', 
                 u'美妆个护', u'宠物', u'女鞋', u'箱包', u'钟表', u'珠宝', u'男鞋',
                 u'运动', u'户外', u'汽车', u'汽车用品', u'母婴', u'玩具乐器',
-                u'食品', u'酒类', u'生鲜', u'礼品鲜花', u'医药保健',]:
-            cate_url = dict_cate_name_and_url[cate_name]
-            #print cate_name, cate_url
+                u'食品', u'酒类', u'生鲜', u'礼品鲜花', u'医药保健',]
+	list_methods = [
+                self.crawlingJiadian, self.crawlingShouji, self.crawlingShuma,
+                self.crawlingDiannao, self.crawlingBg, self.crawlingHome,
+		self.crawlingFurniture, self.crawlingDecoration,
+		self.crawlingKitchenware, self.crawlingMen, self.crawlingWomen,
+		self.crawlingChildren, self.crawlingUnderwear, self.crawlingBeauty,
+		self.crawlingPet, self.crawlingWomensshoes, self.crawlingBag,
+		self.crawlingWatch, self.crawlingJewellery, self.crawlingMensshoes,
+		self.crawlingYundongcheng, self.crawlingOutdoor, self.crawlingCar,
+		self.crawlingChe, self.crawlingBaby, self.crawlingToy,
+		self.crawlingFood, self.crawlingJiu, self.crawlingFresh,
+		self.crawlingGiftandFlowers, self.crawlingHealth,]
+        dict_cate_and_methods = dict(zip(list_cate, list_methods))
 
-            """
-            if cate_name == u'家用电器':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingJiadian)
-            if cate_name == u'手机':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingShouji)
-            if cate_name == u'数码':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingShuma)
-            if cate_name == u'电脑':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingDiannao)
-            if cate_name == u'办公':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingBg)
-            if cate_name == u'家居':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingHome)
-            if cate_name == u'家具':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingFurniture)
-            if cate_name == u'家装':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingDecoration)
-            if cate_name == u'厨具':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingKitchenware)
-            if cate_name == u'男装':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingMen)
-            if cate_name == u'女装':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingWomen)
-            if cate_name == u'童装':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingChildren)
-            if cate_name == u'内衣':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingUnderwear)
-            if cate_name == u'美妆个护':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingBeauty)
-            if cate_name == u'宠物':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingPet)
-            if cate_name == u'女鞋':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingWomensshoes)
-            if cate_name == u'箱包':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingBag)
-            if cate_name == u'钟表':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingWatch)
-            if cate_name == u'珠宝':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingJewellery)
-            if cate_name == u'男鞋':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingMensshoes)
-            if cate_name == u'运动':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingYundongcheng)
-            if cate_name == u'户外':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingOutdoor)
-            if cate_name == u'汽车':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingCar)
-            if cate_name == u'汽车用品':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingChe)
-            if cate_name == u'母婴':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingBaby)
-            if cate_name == u'玩具乐器':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingToy)
-            if cate_name == u'食品':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingFood)
-            if cate_name == u'酒类':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingJiu)
-            if cate_name == u'生鲜':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingFresh)
-            if cate_name == u'礼品鲜花':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingGiftandFlowers)
-            """
-            if cate_name == u'医药保健':
-                yield scrapy.Request(url=cate_url, callback=self.crawlingHealth)
+        for cate_name in list_cate:
+            cate_url = dict_cate_and_url[cate_name]
+            #print cate_name, cate_url
+	    yield scrapy.Request(url=cate_url, callback=dict_cate_and_methods[cate_name])
 
 
     def crawlingHealth(self, response):
@@ -298,7 +255,6 @@ class JDSpider(scrapy.Spider):
 #                print list_to_write
                 ws.append(list_to_write)
         wb.save(self.path_to_write)
-
 
 
     def crawlingFood(self, response):
