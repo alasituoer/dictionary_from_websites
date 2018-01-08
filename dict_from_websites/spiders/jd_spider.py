@@ -3,6 +3,7 @@ import uniout
 import PyV8
 import json
 from openpyxl import Workbook, load_workbook
+import time
 
 import sys
 reload(sys)
@@ -12,7 +13,8 @@ import scrapy
 
 class JDSpider(scrapy.Spider):
     name = 'jd_spider'
-    path_to_write = 'data/dict_from_jd.xlsx'
+    path_to_write = 'data/dict_from_jd_' +\
+            time.strftime("%Y%m%d", time.localtime()) + '.xlsx'
 
     def __init__(self):
         try:
@@ -52,7 +54,8 @@ class JDSpider(scrapy.Spider):
 		self.crawlingGiftandFlowers, self.crawlingHealth,]
         dict_cate_and_methods = dict(zip(list_cate, list_methods))
 
-        for cate_name in list_cate:
+        #for cate_name in list_cate:
+        for cate_name in [u'手机']:
             cate_url = dict_cate_and_url[cate_name]
             #print cate_name, cate_url
 	    yield scrapy.Request(url=cate_url, callback=dict_cate_and_methods[cate_name])
