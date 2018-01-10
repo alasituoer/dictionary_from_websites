@@ -59,9 +59,30 @@ class TaobaoSpider(scrapy.Spider):
             yield scrapy.Request(url=cate_url, callback=dict_cate_method[cate_name])
 
     def crawlingTbdc(self, response):
+        """家电、数码、手机 淘宝字页面称之为 淘宝电场"""
+        wb = load_workbook(self.path_to_write)
+        try:
+            wb.remove_sheet(wb[u'家电'])
+        except Exception, e:
+            pass
+        ws = wb.create_sheet(title=u'家电')
 
+        list_c1 = []
+        for sel in response.xpath("//div[@class='nav-p']/p"):
+            c1 = sel.xpath("span/text()").extract()[0]
+            list_c1.append(c1)
+#        print repr(list_c1).decode('unicode-escape')
 
-
+        # 抓取二级类别及其关键字
+        for i,sel in enumerate(response.xpath("//div[@class='nav-text']/div")):
+	    for sel2 in sel.xpath("div"):
+                c2 = sel2.xpath("div/text()").extract()[0]
+                list_kws_c2 = sel2.xpath("div/a/text()").extract()
+                for kw in list_kws_c2:
+                    list_to_write = [i+1, list_c1[i], c2, kw]
+#                    print repr(list_to_write).decode('unicode-escape')
+                    ws.append(list_to_write)
+        wb.save(self.path_to_write)
 
 
     def crawlingQbb(self, response):
