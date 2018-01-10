@@ -26,8 +26,10 @@ class TaobaoSpider(scrapy.Spider):
         for sel in response.xpath("//ul[@class='service-bd']"):
             list_cate_name = sel.xpath("li/a/text()").extract()
             list_cate_url = sel.xpath("li/a/@href").extract()
+	# 有部分链接缺少'https:', 如: ("//mei.taobao.com"
+	list_cate_url = ['https:'+u if 'http' not in u else u for u in list_cate_url]
         # '童装玩具'、'孕产'、'用品' 的链接一样(去掉'孕产'和'用品')
-	# '家电','数码','手机'的链接一样(去掉'数码'和'手机')
+        # '家电','数码','手机'的链接一样(去掉'数码'和'手机')
         # (汽车)用品 VS (母婴)用品, 两个用品均可去掉
         dict_cate_url = dict(zip(list_cate_name, list_cate_url))
         dict_cate_url.pop(u'孕产') # 童装玩具
@@ -37,10 +39,14 @@ class TaobaoSpider(scrapy.Spider):
 #        print len(list_cate_name)
 #        print len(dict_cate_url.keys())
 
+#	for k in dict_cate_url.keys():
+#	    if 'http' not in dict_cate_url[k]:
+#	        print k, dict_cate_url[k]
+
         list_cate = [
                 u'女装', u'男装', u'内衣', u'鞋靴', u'箱包', u'配件',
-                u'童装玩具', u'家电',]
-#                u'美妆', u'洗护', u'保健品', u'珠宝', u'眼镜', u'手表',
+                u'童装玩具', u'家电', u'美妆',]
+#		u'洗护', u'保健品', u'珠宝', u'眼镜', u'手表',
 #                u'运动', u'户外', u'乐器', u'游戏', u'动漫', u'影视',
 #                u'美食', u'生鲜', u'零食', u'鲜花', u'宠物', u'农资',
 #                u'房产', u'装修', u'家具', u'家饰', u'家纺', u'汽车',
@@ -48,7 +54,8 @@ class TaobaoSpider(scrapy.Spider):
 #                u'家庭保健', u'学习', u'卡券', u'本地服务',]
         list_method = [self.crawlingNvzhuang, self.crawlingNanzhuang,
                 self.crawlingNeiyi, self.crawlingXie, self.crawlingXiangbao,
-		self.crawlingPei, self.crawlingQbb, self.crawlingTbdc,]
+		self.crawlingPei, self.crawlingQbb, self.crawlingTbdc,
+		self.crawlingMei,]
         dict_cate_method = dict(zip(list_cate, list_method))
 
         # 测试用只取最后一个
@@ -57,6 +64,45 @@ class TaobaoSpider(scrapy.Spider):
 #            print cate_name, cate_url
             cate_url = RENDER_HTML_URL + "?url=" + cate_url + "&timeout=10&wait=2"
             yield scrapy.Request(url=cate_url, callback=dict_cate_method[cate_name])
+	
+
+    def crawlingMei(self, response):
+        """美妆"""
+        wb = load_workbook(self.path_to_write)
+        try:
+            wb.remove_sheet(wb[u'美妆'])
+        except Exception, e:
+            pass
+        ws = wb.create_sheet(title=u'美妆')
+
+        for idx,sel in enumerate(response.xpath(
+                "//div[@class='market-wrap clearfix sm-cat-list-main']/dl")):
+            # 首页显示类别
+            list_old_cate = eval(sel.xpath("textarea[1]/text()").extract()[0].strip())
+	    list_old_cate = [d['cat_name'].decode('unicode-escape') for d in list_old_cate]
+#            print repr(list_old_cate).decode('unicode-escape')
+            for kw in list_old_cate[1:]:
+                list_to_write = [idx+1, list_old_cate[0], '', kw]
+#                print repr(list_to_write).decode('unicode-escape')
+                ws.append(list_to_write)
+
+            # 扩展(及隐藏)类别
+            list_extra_cate = eval(sel.xpath("textarea[2]/text()").extract()[0].strip())
+            list_cate = [d['cat_name'].decode('unicode-escape') for d in list_extra_cate]
+            list_istitle = [d['is_title']=='true' for d in list_extra_cate]
+#            print repr(list_cate).decode('unicode-escape')
+#            print list_istitle
+            list_index = np.argwhere(np.array(list_istitle)).T[0].tolist()
+            list_index.append(len(list_cate))
+            list_zip_cate_kw = [(list_index[i], list_index[i+1]) \
+	            for i in range(len(list_index)-1)]
+            for i,j in list_zip_cate_kw:
+                for k in range(i+1,j):
+                    list_to_write = [idx+1, list_old_cate[0], list_cate[i], list_cate[k]]
+#                    print repr(list_to_write).decode('unicode-escape')
+                    ws.append(list_to_write)
+        wb.save(self.path_to_write)
+
 
     def crawlingTbdc(self, response):
         """家电、数码、手机 淘宝字页面称之为 淘宝电场"""
