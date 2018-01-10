@@ -36,6 +36,8 @@ class TaobaoSpider(scrapy.Spider):
         dict_cate_url.pop(u'手机') # 同 家电 而去掉
         dict_cate_url.pop(u'保健品') # 不常见且没有有效关键字 而去掉
         dict_cate_url.pop(u'户外') # 同 运动 而去掉
+        dict_cate_url.pop(u'生鲜') # 同 美食 而去掉
+        dict_cate_url.pop(u'零食') # 同 美食 而去掉
 #        print len(list_cate_name)
 #        print len(dict_cate_url.keys())
 
@@ -46,17 +48,18 @@ class TaobaoSpider(scrapy.Spider):
         list_cate = [
                 u'女装', u'男装', u'内衣', u'鞋靴', u'箱包', u'配件',
                 u'童装玩具', u'家电', u'美妆', u'洗护',
-                u'珠宝', u'眼镜', u'手表', u'运动', u'乐器',]
+                u'珠宝', u'眼镜', u'手表', u'运动', u'乐器',
 #                u'游戏', u'动漫', u'影视',
-#                u'美食', u'生鲜', u'零食', u'鲜花', u'宠物', u'农资',
-#                u'房产', u'装修', u'家具', u'家饰', u'家纺', u'汽车',
-#                u'二手车', u'办公', u'DIY', u'五金电子', u'百货', u'货厨',
+                u'美食', u'鲜花',]
+#                u'宠物', u'农资', u'房产', u'装修', u'家具', u'家饰', u'家纺',
+                u'汽车',]# u'二手车', u'办公', u'DIY', u'五金电子', u'百货', u'货厨',
 #                u'家庭保健', u'学习', u'卡券', u'本地服务',]
         list_method = [self.crawlingNvzhuang, self.crawlingNanzhuang,
                 self.crawlingNeiyi, self.crawlingXie, self.crawlingXiangbao,
                 self.crawlingPei, self.crawlingQbb, self.crawlingTbdc,
                 self.crawlingMei, self.crawlingXihuyongpin, self.crawlingZhubao,
-                self.crawlingYanjing, self.crawlingShoubiao, self.crawlingCoolcityhome,]
+                self.crawlingYanjing, self.crawlingShoubiao, self.crawlingCoolcityhome,
+		self.crawlingAmusement, self.crawlingChi,]
         dict_cate_method = dict(zip(list_cate, list_method))
 
         # 测试用只取最后一个
@@ -67,6 +70,53 @@ class TaobaoSpider(scrapy.Spider):
             yield scrapy.Request(url=cate_url, callback=dict_cate_method[cate_name])
 
 
+    def crawlingChi(self, response):
+        """'美食','生鲜','零食', 淘宝汇吃"""
+        wb = load_workbook(self.path_to_write)
+        try:
+            wb.remove_sheet(wb[u'美食'])
+        except Exception, e:
+            pass
+        ws = wb.create_sheet(title=u'美食')
+
+        for idx,sel in enumerate(response.xpath(
+                "//ul[@class='items-menu-container J_Nav']/li")):
+            c1 = sel.xpath("div[@class='keys-wrap']/a/text()").extract()[0]
+            list_kws_c1 = sel.xpath("div[@class='keys-wrap']/p/a/text()").extract()
+            for kw in list_kws_c1:
+                list_to_write = [idx+1, c1, '', kw]
+#                print repr(list_to_write).decode('unicode-escape')
+                ws.append(list_to_write)
+
+            for sel2 in sel.xpath("div[@class='subitems-container']/ul/li"):
+                c2 = sel2.xpath("a/span/text()").extract()[0]
+                list_kws_c2 = sel2.xpath("div/span/a/text()").extract()
+                for kw in list_kws_c2:
+                    list_to_write = [idx+1, c1, c2, kw]
+#                    print repr(list_to_write).decode('unicode-escape')
+                    ws.append(list_to_write)
+        wb.save(self.path_to_write)
+
+
+
+    def crawlingAmusement(self, response):
+        """乐器"""
+        wb = load_workbook(self.path_to_write)
+        try:
+            wb.remove_sheet(wb[u'乐器'])
+        except Exception, e:
+            pass
+        ws = wb.create_sheet(title=u'乐器')
+
+        for sel in response.xpath("//div[@id='guid-770244']/div"):
+            dict_c1 = eval(sel.xpath("textarea/text()").extract()[0])
+	    for idx,c1 in enumerate(dict_c1['cat_mian']):
+                for kw in c1['cat_data']:
+	            list_to_write = [idx+1, c1['name'].decode('utf-8'),
+                            kw['cat_name'].decode('utf-8')]
+#                    print repr(list_to_write).decode('unicode-escape')
+                    ws.append(list_to_write)
+        wb.save(self.path_to_write)
 
 
     def crawlingCoolcityhome(self, response):
