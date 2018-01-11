@@ -21,14 +21,14 @@ class TaobaoSpider(scrapy.Spider):
             wb = load_workbook(self.path_to_write)
         except Exception, e:
             wb = Workbook()
-	    wb.save(self.path_to_write)
+            wb.save(self.path_to_write)
 
     def parse(self, response):
         for sel in response.xpath("//ul[@class='service-bd']"):
             list_cate_name = sel.xpath("li/a/text()").extract()
             list_cate_url = sel.xpath("li/a/@href").extract()
-	# 有部分链接缺少'https:', 如: ("//mei.taobao.com"
-	list_cate_url = ['https:'+u if 'http' not in u else u for u in list_cate_url]
+        # 有部分链接缺少'https:', 如: ("//mei.taobao.com"
+        list_cate_url = ['https:'+u if 'http' not in u else u for u in list_cate_url]
         # (汽车)用品 VS (母婴)用品, 两个用品均可去掉
         dict_cate_url = dict(zip(list_cate_name, list_cate_url))
         dict_cate_url.pop(u'孕产') # 同 童装玩具 而去掉
@@ -39,9 +39,9 @@ class TaobaoSpider(scrapy.Spider):
         dict_cate_url.pop(u'户外') # 同 运动 而去掉
         dict_cate_url.pop(u'生鲜') # 同 美食 而去掉
         dict_cate_url.pop(u'零食') # 同 美食 而去掉
-	# 百货的链接指向阿里旗下的一站式家居购物平台jiyoujia
-	# 且访问过多会被要求登陆, 不如直接访问"极有家"
-	dict_cate_url[u'百货'] = 'https://www.jiyoujia.com'
+        # 百货的链接指向阿里旗下的一站式家居购物平台jiyoujia
+        # 且访问过多会被要求登陆, 不如直接访问"极有家"
+        dict_cate_url[u'百货'] = 'https://www.jiyoujia.com'
 #        print len(list_cate_name)
 #        print len(dict_cate_url.keys())
 
@@ -49,11 +49,11 @@ class TaobaoSpider(scrapy.Spider):
 #            if 'http' not in dict_cate_url[k]:
 #                print k, dict_cate_url[k]
 
-        list_cate = [
-                u'女装', u'男装', u'内衣', u'鞋靴', u'箱包', u'配件',
-                u'童装玩具', u'家电', u'美妆', u'洗护', u'珠宝', 
-                u'眼镜', u'手表', u'运动', u'乐器', u'美食', u'汽车',
-                u'办公', u'DIY', u'五金电子', u'百货',]#
+        list_cate = [u'女装', u'男装', u'内衣', u'鞋靴', u'箱包', 
+                u'配件', u'童装玩具', u'家电', u'美妆', u'洗护', 
+                u'珠宝', u'眼镜', u'手表', u'运动', u'乐器', 
+                u'美食', u'汽车', u'办公', u'DIY', u'五金电子', 
+                u'百货',]#
 #                u'二手车', u'货厨',
 #                u'家庭保健', u'学习', u'卡券', u'本地服务',]
 #                u'游戏', u'动漫', u'影视', u'鲜花', u'宠物', u'农资', 
@@ -65,11 +65,13 @@ class TaobaoSpider(scrapy.Spider):
                 self.crawlingYanjing, self.crawlingShoubiao, self.crawlingCoolcityhome,
                 self.crawlingAmusement, self.crawlingChi, self.crawlingCar,
                 self.crawlingBangong, self.crawlingDingzhi, self.crawlingWujin,
-		self.crawlingBaihuo,]
+                self.crawlingBaihuo,]
         dict_cate_method = dict(zip(list_cate, list_method))
 
         # 测试用只取最后一个
-        for cate_name in list_cate[-1:]:
+#        for cate_name in [u'内衣']:
+#        for cate_name in list_cate[-1:]:
+        for cate_name in list_cate:
             cate_url = dict_cate_url[cate_name]
 #            print cate_name, cate_url
             cate_url = RENDER_HTML_URL + "?url=" + cate_url + "&timeout=10&wait=2"
@@ -85,22 +87,27 @@ class TaobaoSpider(scrapy.Spider):
             pass
         ws = wb.create_sheet(title=u'百货')
 
-	for 
+        # 得到一级分类名
+        for sel in response.xpath("//ul[@class='sub-menus clearfix']"):
+            list_c1 = sel.xpath("li/a/text()").extract()
+#            print repr(list_c1).decode('unicode-escape')
 
-        # 4个大品类的二级分类数据存放在<textarea>中
+        # 4个大品类的二级分类名及关键字存放在<textarea>中
         # 但提取到的<textarea>标签的文本值是"一段html语句"(不是往常的'字典子字符串')
-	# 所以重新指定response.body, 重新解析网页得到所需内容
-        for sel in response.xpath("//textarea[@class='J_Sub_Menu_Content']"):
-	    res2 = response.replace(body=sel.xpath("text()").extract()[0])
-	    # 显式复制
-	    for sel2 in res2.xpath("//div[@class='col-block-wrap']"):
-                #c1 = sel2.xpath("a/img/@alt").extract()[0]
-                c1 = sel2.xpath("a/text()").extract()[0]
-	        for sel3 in sel2.xpath("ul[@class='server-list clearfix']/li"):
-                    list_kws_c1 =  sel3.xpath("a/text()").extract()[0]
-                    list_to_write = [c1, list_kws_c1]
-                    print repr(list_to_write).decode('unicode-escape')
-
+        # 所以重新指定response.body, 重新解析网页得到所需内容
+        for idx,sel in enumerate(response.xpath(
+                "//textarea[@class='J_Sub_Menu_Content']")):
+            res2 = response.replace(body=sel.xpath("text()").extract()[0])
+            # 显式复制
+            for sel2 in res2.xpath("//div[@class='col-block-wrap']"):
+                #c2 = sel2.xpath("a/img/@alt").extract()[0]
+                c2 = sel2.xpath("a/text()").extract()[0]
+                for sel3 in sel2.xpath("ul[@class='server-list clearfix']/li"):
+                    list_kws_c2 =  sel3.xpath("a/text()").extract()[0]
+                    list_to_write = [idx+1, list_c1[idx], c2, list_kws_c2]
+#                    print repr(list_to_write).decode('unicode-escape')
+                    ws.append(list_to_write)
+        wb.save(self.path_to_write)
 
 
     def crawlingWujin(self, response):
@@ -224,8 +231,6 @@ class TaobaoSpider(scrapy.Spider):
         wb.save(self.path_to_write)
 
 
-
-
     def crawlingChi(self, response):
         """'美食','生鲜','零食', 淘宝汇吃"""
         wb = load_workbook(self.path_to_write)
@@ -265,9 +270,9 @@ class TaobaoSpider(scrapy.Spider):
 
         for sel in response.xpath("//div[@id='guid-770244']/div"):
             dict_c1 = eval(sel.xpath("textarea/text()").extract()[0])
-	    for idx,c1 in enumerate(dict_c1['cat_mian']):
+            for idx,c1 in enumerate(dict_c1['cat_mian']):
                 for kw in c1['cat_data']:
-	            list_to_write = [idx+1, c1['name'].decode('utf-8'),
+                    list_to_write = [idx+1, c1['name'].decode('utf-8'),
                             kw['cat_name'].decode('utf-8')]
 #                    print repr(list_to_write).decode('unicode-escape')
                     ws.append(list_to_write)
@@ -332,7 +337,7 @@ class TaobaoSpider(scrapy.Spider):
         for idx,sel in enumerate(response.xpath("//div[@class='bd']/ul/li")):
             c1 = sel.xpath("p/a/text()").extract()[0]
             list_kws_c1 = eval(sel.xpath("dl/textarea/text()").extract()[0])['custom']
-	    list_kws_c1 = [d['cat_name'].decode('utf-8') for d in list_kws_c1]
+            list_kws_c1 = [d['cat_name'].decode('utf-8') for d in list_kws_c1]
 #            print c1, repr(list_kws_c1).decode('unicode-escape')
             for kw in list_kws_c1:
                 list_to_write = [idx+1, c1, kw,]
@@ -511,7 +516,6 @@ class TaobaoSpider(scrapy.Spider):
         wb.save(self.path_to_write)
 
 
-
     def crawlingXiangbao(self, response):
         """箱包"""
         wb = load_workbook(self.path_to_write)
@@ -546,7 +550,6 @@ class TaobaoSpider(scrapy.Spider):
                     list_to_write = [idx+1, list_old_cate[0], list_cate[i], list_cate[k]]
 #                    print repr(list_to_write).decode('unicode-escape')
                     ws.append(list_to_write)
-
         wb.save(self.path_to_write)
 
 
@@ -579,12 +582,6 @@ class TaobaoSpider(scrapy.Spider):
 
     def crawlingNeiyi(self, response):
         """内衣"""
-#        print 'hello alas'
-
-#        with open('data/t.html', 'w') as f:
-#            f.write(response.body)
-
-	"""
         wb = load_workbook(self.path_to_write)
         try:
             wb.remove_sheet(wb[u'内衣'])
@@ -592,16 +589,18 @@ class TaobaoSpider(scrapy.Spider):
             pass
         ws = wb.create_sheet(title=u'内衣')
 
-        for i,sel in enumerate(response.xpath("//ul[@class='list-wrap']/li")):
-            c1 = sel.xpath("p/a/text()").extract()
-            list_kws_c1 = sel.xpath("dl/dd/a/text()").extract()
-            print c1, repr(list_kws_c1).decode('unicode-escape')
-            for kw in list_kws_c1:
-                list_to_write = [i+1, c1, kw]
-                print repr(list_to_write).decode('unicode-escape')
-                ws.append(list_to_write)
+        for sel in response.xpath("//ul[@class='list-wrap']/../../textarea"):
+            dict_old = eval(sel.xpath("text()").extract()[0].strip())
+            for idx,c1 in enumerate(dict_old['cat_mian']):
+                try:
+                    for kw in c1['cat_data']:
+                        list_to_write = [idx+1, c1['name'].decode('utf-8'),
+                                kw['cat_name'].decode('utf-8')]
+#                        print repr(list_to_write).decode('unicode-escape')
+                        ws.append(list_to_write)
+                except Exception, e:
+                    continue
         wb.save(self.path_to_write)
-	"""
 
 
     def crawlingNanzhuang(self, response):
@@ -642,6 +641,5 @@ class TaobaoSpider(scrapy.Spider):
 #                print repr(list_to_write).decode('unicode-escape')
                 ws.append(list_to_write)
         wb.save(self.path_to_write)
-
 
 
