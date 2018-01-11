@@ -11,7 +11,7 @@ RENDER_HTML_URL = "http://localhost:8050/render.html"
 class TaobaoSpider(scrapy.Spider):
     name = 'taobao_spider'
     start_urls = ['https://www.taobao.com']
-    allowed_domains = ['taobao.com', 'localhost',]
+    allowed_domains = ['taobao.com', 'localhost', 'jiyoujia.com',]
 
     path_to_write = 'data/dict_from_taobao_' +\
             time.strftime("%Y%m%d", time.localtime()) + '.xlsx'
@@ -39,6 +39,9 @@ class TaobaoSpider(scrapy.Spider):
         dict_cate_url.pop(u'户外') # 同 运动 而去掉
         dict_cate_url.pop(u'生鲜') # 同 美食 而去掉
         dict_cate_url.pop(u'零食') # 同 美食 而去掉
+	# 百货的链接指向阿里旗下的一站式家居购物平台jiyoujia
+	# 且访问过多会被要求登陆, 不如直接访问"极有家"
+	dict_cate_url[u'百货'] = 'https://www.jiyoujia.com'
 #        print len(list_cate_name)
 #        print len(dict_cate_url.keys())
 
@@ -50,8 +53,8 @@ class TaobaoSpider(scrapy.Spider):
                 u'女装', u'男装', u'内衣', u'鞋靴', u'箱包', u'配件',
                 u'童装玩具', u'家电', u'美妆', u'洗护', u'珠宝', 
                 u'眼镜', u'手表', u'运动', u'乐器', u'美食', u'汽车',
-                u'办公',]# u'DIY', u'五金电子',
-#                u'二手车', u'百货', u'货厨',
+                u'办公', u'DIY', u'五金电子', u'百货',]#
+#                u'二手车', u'货厨',
 #                u'家庭保健', u'学习', u'卡券', u'本地服务',]
 #                u'游戏', u'动漫', u'影视', u'鲜花', u'宠物', u'农资', 
 #                u'房产', u'装修', u'家具', u'家饰', u'家纺',
@@ -60,8 +63,9 @@ class TaobaoSpider(scrapy.Spider):
                 self.crawlingPei, self.crawlingQbb, self.crawlingTbdc,
                 self.crawlingMei, self.crawlingXihuyongpin, self.crawlingZhubao,
                 self.crawlingYanjing, self.crawlingShoubiao, self.crawlingCoolcityhome,
-		self.crawlingAmusement, self.crawlingChi, self.crawlingCar,
-		self.crawlingBangong,]
+                self.crawlingAmusement, self.crawlingChi, self.crawlingCar,
+                self.crawlingBangong, self.crawlingDingzhi, self.crawlingWujin,
+		self.crawlingBaihuo,]
         dict_cate_method = dict(zip(list_cate, list_method))
 
         # 测试用只取最后一个
@@ -70,6 +74,95 @@ class TaobaoSpider(scrapy.Spider):
 #            print cate_name, cate_url
             cate_url = RENDER_HTML_URL + "?url=" + cate_url + "&timeout=10&wait=2"
             yield scrapy.Request(url=cate_url, callback=dict_cate_method[cate_name])
+
+
+    def crawlingBaihuo(self, response):
+        """百货"""
+        wb = load_workbook(self.path_to_write)
+        try:
+            wb.remove_sheet(wb[u'百货'])
+        except Exception, e:
+            pass
+        ws = wb.create_sheet(title=u'百货')
+
+	for 
+
+        # 4个大品类的二级分类数据存放在<textarea>中
+        # 但提取到的<textarea>标签的文本值是"一段html语句"(不是往常的'字典子字符串')
+	# 所以重新指定response.body, 重新解析网页得到所需内容
+        for sel in response.xpath("//textarea[@class='J_Sub_Menu_Content']"):
+	    res2 = response.replace(body=sel.xpath("text()").extract()[0])
+	    # 显式复制
+	    for sel2 in res2.xpath("//div[@class='col-block-wrap']"):
+                #c1 = sel2.xpath("a/img/@alt").extract()[0]
+                c1 = sel2.xpath("a/text()").extract()[0]
+	        for sel3 in sel2.xpath("ul[@class='server-list clearfix']/li"):
+                    list_kws_c1 =  sel3.xpath("a/text()").extract()[0]
+                    list_to_write = [c1, list_kws_c1]
+                    print repr(list_to_write).decode('unicode-escape')
+
+
+
+    def crawlingWujin(self, response):
+        """五金电子"""
+        wb = load_workbook(self.path_to_write)
+        try:
+            wb.remove_sheet(wb[u'五金电子'])
+        except Exception, e:
+            pass
+        ws = wb.create_sheet(title=u'五金电子')
+
+        # 第一屏左侧分类(7个, 少于下述的9个
+        # 所以不能在此得到list_c1做下述的大类别名匹配)
+        for sel in response.xpath("//div[@class='sub-d-menu']/dl"):
+            c1 = sel.xpath("dt/text()").extract()[0]
+            list_kws_c1 = sel.xpath("dd/a/text()").extract()
+            for kw in list_kws_c1:
+                list_to_write = ['', c1, '', kw]
+#                print repr(list_to_write).decode('unicode-escape')
+                ws.append(list_to_write)
+
+        # 往下滚动左侧细分类
+        # 左侧的(9个)类别名是图片, 需要单独提取
+        list_c1 = []
+        for sel in response.xpath("//p[@class='designer']"):
+            c1 = sel.xpath("span/text()").extract()[0]
+            list_c1.append(c1)
+#        print repr(list_c1).decode('unicode-escape')
+        # 再提取关键字
+        for idx,sel in enumerate(response.xpath("//textarea[@class='J_Dynamic_Data']")):
+            dict_old = eval(sel.xpath("text()").extract()[0].strip())
+            list_needed = dict_old['textlink'][0]['text']
+#            print json.dumps(list_needed, indent=1)
+            for c2 in list_needed:
+                for kw in c2['texts']:
+                    list_to_write = [idx+1, list_c1[idx], c2['name'].decode('utf-8'), 
+                            kw['cat_name'].decode('utf-8')]
+#                    print repr(list_to_write).decode('unicode-escape')
+                    ws.append(list_to_write)
+        wb.save(self.path_to_write)
+
+
+    def crawlingDingzhi(self, response):
+        """DIY (定制)"""
+        wb = load_workbook(self.path_to_write)
+        try:
+            wb.remove_sheet(wb[u'DIY'])
+        except Exception, e:
+            pass
+        ws = wb.create_sheet(title=u'DIY')
+
+        #print 'hello alas'
+        for sel in response.xpath("//div[@id='guid-361957']/div/textarea"):
+            dict_old = eval(sel.xpath("text()").extract()[0])
+            #print json.dumps(dict_old['cat_mian'], indent=1)
+            for idx,c1 in enumerate(dict_old['cat_mian']):
+                for c2 in c1['cat_data']:
+                    list_to_write = [idx+1, c1['name'].decode('utf-8'),
+                            c2['cat_name'].decode('utf-8')]
+#                    print repr(list_to_write).decode('unicode-escape')
+                    ws.append(list_to_write)
+        wb.save(self.path_to_write)
 
 
     def crawlingBangong(self, response):
