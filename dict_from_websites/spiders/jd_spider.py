@@ -13,7 +13,8 @@ import scrapy
 
 class JDSpider(scrapy.Spider):
     name = 'jd_spider'
-    path_to_write = 'data/dict_from_jd_' +\
+    path_to_write = '/mnt/hgfs/windows_desktop/classification_and_coding/' +\
+            'data/dictionary_building/from_shopping_websites/dict_from_jd_' +\
             time.strftime("%Y%m%d", time.localtime()) + '.xlsx'
 
     def __init__(self):
@@ -21,13 +22,13 @@ class JDSpider(scrapy.Spider):
             wb = load_workbook(self.path_to_write)
         except Exception, e:
             wb = Workbook()
-	    wb.save(self.path_to_write)
+            wb.save(self.path_to_write)
 
     def start_requests(self):
         list_urls = ['https://www.jd.com',]
         for url in list_urls:
             yield scrapy.Request(url=url, callback=self.parse)
-	
+
     def parse(self, response):
         for sel in response.xpath("//ul[@class='JS_navCtn cate_menu']"):
             list_cate_name = sel.xpath("li/a/text()").extract()
@@ -35,30 +36,35 @@ class JDSpider(scrapy.Spider):
             list_cate_url = ['https:'+i for i in list_cate_url]
         dict_cate_and_url = dict(zip(list_cate_name, list_cate_url))
 
-	list_cate = [u'家用电器', u'手机', u'数码', u'电脑', u'办公', u'家居',
-                u'家具', u'家装', u'厨具', u'男装', u'女装', u'童装', u'内衣', 
-                u'美妆个护', u'宠物', u'女鞋', u'箱包', u'钟表', u'珠宝', u'男鞋',
-                u'运动', u'户外', u'汽车', u'汽车用品', u'母婴', u'玩具乐器',
-                u'食品', u'酒类', u'生鲜', u'礼品鲜花', u'医药保健',]
-	list_methods = [
+        list_cate = [ # 5个一行 共31个品类
+                u'家用电器', u'手机', u'数码', u'电脑', u'办公',
+                u'家居', u'家具', u'家装', u'厨具', u'男装',
+                u'女装', u'童装', u'内衣', u'美妆个护', u'宠物',
+                u'女鞋', u'箱包', u'钟表', u'珠宝', u'男鞋',
+                u'运动', u'户外', u'汽车', u'汽车用品', u'母婴',
+                u'玩具乐器', u'食品', u'酒类', u'生鲜', u'礼品鲜花',
+                u'医药保健',]
+        list_methods = [
                 self.crawlingJiadian, self.crawlingShouji, self.crawlingShuma,
                 self.crawlingDiannao, self.crawlingBg, self.crawlingHome,
-		self.crawlingFurniture, self.crawlingDecoration,
-		self.crawlingKitchenware, self.crawlingMen, self.crawlingWomen,
-		self.crawlingChildren, self.crawlingUnderwear, self.crawlingBeauty,
-		self.crawlingPet, self.crawlingWomensshoes, self.crawlingBag,
-		self.crawlingWatch, self.crawlingJewellery, self.crawlingMensshoes,
-		self.crawlingYundongcheng, self.crawlingOutdoor, self.crawlingCar,
-		self.crawlingChe, self.crawlingBaby, self.crawlingToy,
-		self.crawlingFood, self.crawlingJiu, self.crawlingFresh,
-		self.crawlingGiftandFlowers, self.crawlingHealth,]
+                self.crawlingFurniture, self.crawlingDecoration,
+                self.crawlingKitchenware, self.crawlingMen, self.crawlingWomen,
+                self.crawlingChildren, self.crawlingUnderwear, self.crawlingBeauty,
+                self.crawlingPet, self.crawlingWomensshoes, self.crawlingBag,
+                self.crawlingWatch, self.crawlingJewellery, self.crawlingMensshoes,
+                self.crawlingYundongcheng, self.crawlingOutdoor, self.crawlingCar,
+                self.crawlingChe, self.crawlingBaby, self.crawlingToy,
+                self.crawlingFood, self.crawlingJiu, self.crawlingFresh,
+                self.crawlingGiftandFlowers, self.crawlingHealth,]
         dict_cate_and_methods = dict(zip(list_cate, list_methods))
 
-        #for cate_name in list_cate:
-        for cate_name in [u'手机']:
+#        for cate_name in [u'手机']:
+#        for cate_name in list_cate[-1:]:
+        for cate_name in list_cate:
             cate_url = dict_cate_and_url[cate_name]
             #print cate_name, cate_url
-	    yield scrapy.Request(url=cate_url, callback=dict_cate_and_methods[cate_name])
+            yield scrapy.Request(url=cate_url,
+                    callback=dict_cate_and_methods[cate_name])
 
 
     def crawlingHealth(self, response):
@@ -150,9 +156,7 @@ class JDSpider(scrapy.Spider):
                     list_to_write = [i+1, list_c1[i], c1['NAME'], c2['NAME'],]
 #                    print list_to_write
                     ws.append(list_to_write)
-
         wb.save(self.path_to_write)
-
 
 
     def crawlingFresh(self, response):
@@ -205,7 +209,6 @@ class JDSpider(scrapy.Spider):
                     list_to_write = [i+1, list_c1[i], c1['NAME'], c2['NAME'],]
 #                    print list_to_write
                     ws.append(list_to_write)
-
         wb.save(self.path_to_write)
 
 
@@ -401,7 +404,7 @@ class JDSpider(scrapy.Spider):
                     list_to_write = [i+1, list_c1[i], c1['NAME'], d['NAME']]
                     ws.append(list_to_write)                    
         wb.save(self.path_to_write)
-		
+
 
     def crawlingChe(self, response):
         """汽车用品"""
@@ -433,8 +436,8 @@ class JDSpider(scrapy.Spider):
 #        print dict_content.keys()
 
         list_cate = {6742: u'维修保养' , 6740: u'车载电器', 6743: u'美容清洗',
-                     6745: u'汽车装饰', 6747: u'安全自驾', 12402: u'线下服务',
-		     13256: u'轮胎配件'}
+                    6745: u'汽车装饰', 6747: u'安全自驾', 12402: u'线下服务',
+                    13256: u'轮胎配件'}
         for i,s in enumerate(dict_content['menu']):
 #            print s['cateId']
             for d in s['category']:
@@ -442,7 +445,6 @@ class JDSpider(scrapy.Spider):
                 list_to_write = [i+1, list_cate[s['cateId']], d['NAME']]
 #                print list_to_write
                 ws.append(list_to_write)
-
         wb.save(self.path_to_write)
 
 
@@ -455,7 +457,7 @@ class JDSpider(scrapy.Spider):
             pass
         ws = wb.create_sheet(title=u'汽车')
 
-	for i,sel in enumerate(response.xpath("//div[@class='categories']/div")):
+        for i,sel in enumerate(response.xpath("//div[@class='categories']/div")):
             c1 = sel.xpath("p/text()").extract()[0].strip()
             list_kws_c1 = sel.xpath("ul/li/a/text()").extract()
 #            print c1, list_kws_c1
@@ -475,7 +477,7 @@ class JDSpider(scrapy.Spider):
             pass
         ws = wb.create_sheet(title=u'户外')
 
-	for i,sel in enumerate(response.xpath("//div[@id='Categorys']/div/dl")):
+        for i,sel in enumerate(response.xpath("//div[@id='Categorys']/div/dl")):
             c1 = sel.xpath("dt/text()").extract()[0].strip()
             list_kws_c1 = sel.xpath("dd/a/text()").extract()
 #            print c1, list_kws_c1
@@ -495,7 +497,7 @@ class JDSpider(scrapy.Spider):
             pass
         ws = wb.create_sheet(title=u'运动')
 
-	for i,sel in enumerate(response.xpath("//div[@id='storeCategorys']/div/dl")):
+        for i,sel in enumerate(response.xpath("//div[@id='storeCategorys']/div/dl")):
             c1 = sel.xpath("dt/text()").extract()[0].strip()
             list_kws_c1 = sel.xpath("dd/a/text()").extract()
 #            print c1, list_kws_c1
@@ -515,7 +517,7 @@ class JDSpider(scrapy.Spider):
             pass
         ws = wb.create_sheet(title=u'男鞋')
 
-	for i,sel in enumerate(response.xpath("//div[@class='title']/dl")):
+        for i,sel in enumerate(response.xpath("//div[@class='title']/dl")):
             c1 = sel.xpath("dt/text()").extract()[0].strip()
             list_kws_c1 = sel.xpath("dd/ul/li/a/@title").extract()
 #            print c1, list_kws_c1
@@ -535,11 +537,12 @@ class JDSpider(scrapy.Spider):
             pass
         ws = wb.create_sheet(title=u'珠宝')
 
-	for i,sel in enumerate(response.xpath("//div[@id='jewelleryCategorys']/div/dl")):
+        for i,sel in enumerate(response.xpath(
+                "//div[@id='jewelleryCategorys']/div/dl")):
             c1 = sel.xpath("dt/text()").extract()[0].strip()
             list_kws_c1 = sel.xpath("dd/a/text()").extract()
 #            print c1, list_kws_c1
-	    for kw in list_kws_c1:
+            for kw in list_kws_c1:
                 list_to_write = [i+1, c1, kw]
 #                print list_to_write
                 ws.append(list_to_write)
@@ -572,7 +575,6 @@ class JDSpider(scrapy.Spider):
                 list_to_write = [i+1, list_c1[i], kw,]
 #                print list_to_write
                 ws.append(list_to_write)
-
         wb.save(self.path_to_write)
 
 
@@ -585,14 +587,15 @@ class JDSpider(scrapy.Spider):
             pass
         ws = wb.create_sheet(title=u'箱包')
 
-	for i,sel in enumerate(response.xpath("//div[@class='categorys-inner']/div/dl")):
+        for i,sel in enumerate(response.xpath(
+                "//div[@class='categorys-inner']/div/dl")):
             try:
                 c1 = sel.xpath("dt/a/text()").extract()[0].strip()
-	    except Exception, e:
+            except Exception, e:
                 c1 = sel.xpath("dt/text()").extract()[0].strip()
             list_kws_c1 = sel.xpath("dd/a/text()").extract()
 #            print c1, list_kws_c1
-	    for kw in list_kws_c1:
+            for kw in list_kws_c1:
                 list_to_write = [i+1, c1, kw]
 #                print list_to_write
                 ws.append(list_to_write)
@@ -608,11 +611,11 @@ class JDSpider(scrapy.Spider):
             pass
         ws = wb.create_sheet(title=u'女鞋')
 
-	for i,sel in enumerate(response.xpath("//div[@class='menu']/dl")):
+        for i,sel in enumerate(response.xpath("//div[@class='menu']/dl")):
             c1 = sel.xpath("dt/text()").extract()[0].strip()
             list_kws_c1 = sel.xpath("dd/a/text()").extract()
 #            print c1, list_kws_c1
-	    for kw in list_kws_c1:
+            for kw in list_kws_c1:
                 list_to_write = [i+1, c1, kw]
 #                print list_to_write
                 ws.append(list_to_write)
@@ -671,21 +674,19 @@ class JDSpider(scrapy.Spider):
                     list_to_write = [i+1, list_c1[i], c1['NAME'], c2['NAME'],]
 #                    print list_to_write
                     ws.append(list_to_write)
-
         wb.save(self.path_to_write)
-
 
 
     def crawlingBeauty(self, response):
         """美妆个护"""
         body = response.body.decode('gbk', 'ignore')
         start_strings = "window.data['care_banner2_1']"
-	# 美妆个护的结束符有点特别
+        # 美妆个护的结束符有点特别
         end_strings = "};"
         start_index = body.index(start_strings)
         needed_content = body[start_index:]
         end_index = needed_content.index(end_strings)
-	# 保证截取字符串完整, 需要加上len(end_index)
+        # 保证截取字符串完整, 需要加上len(end_index)
         needed_content = needed_content[:end_index+len(end_strings)].strip()
         needed_content = needed_content.replace(
                 ' ', '').replace('\n', '').replace('\t', '')
@@ -709,16 +710,16 @@ class JDSpider(scrapy.Spider):
 
         # 仅提取需要的品类
         list_section = ['subFirst1', 'subFirst2', 'subFirst3', 'subFirst4', 
-		'subFirst5', 'subFirst6', 'subFirst7', 'subFirst8',]
-	list_section_name = []
+                'subFirst5', 'subFirst6', 'subFirst7', 'subFirst8',]
+        list_section_name = []
         for i,c1 in enumerate(dict_content['navFirst']):
             list_section_name.append(c1['NAME'])
 #            print c1['NAME']
-	    for c2 in c1['children']:
+            for c2 in c1['children']:
 #                print '\t', c2['NAME']
                 list_to_write = [i+1, c1['NAME'], c2['NAME']]
-#		print list_to_write
-		ws.append(list_to_write)
+#                print list_to_write
+                ws.append(list_to_write)
 #        print list_section_name
 
         for i,s in enumerate(list_section):
@@ -740,7 +741,7 @@ class JDSpider(scrapy.Spider):
             pass
         ws = wb.create_sheet(title=u'内衣')
 
-	for i,sel in enumerate(response.xpath("//div[@id='womanCategorys']/div/dl")):
+        for i,sel in enumerate(response.xpath("//div[@id='womanCategorys']/div/dl")):
             c1 = sel.xpath("dt/text()").extract()[0].strip()
             list_kws_c1 = sel.xpath("dd/a/text()").extract()
 #            print c1, list_kws_c1
@@ -766,14 +767,14 @@ class JDSpider(scrapy.Spider):
             c2 = sel.xpath("div[2]/h4/text()").extract()[0]
             list_kws_c2 = sel.xpath("div[2]/div/a/text()").extract()
 #            print c1, list_kws_c1
-	    for kw in list_kws_c1:
-	        list_to_write = [i+1, c1, kw]
+            for kw in list_kws_c1:
+                list_to_write = [i+1, c1, kw]
 #                print list_to_write
                 ws.append(list_to_write)
 
 #            print c2, list_kws_c2
-	    for kw in list_kws_c2:
-	        list_to_write = [i+1, c2, kw]
+            for kw in list_kws_c2:
+                list_to_write = [i+1, c2, kw]
 #                print list_to_write
                 ws.append(list_to_write)
         wb.save(self.path_to_write)
@@ -801,7 +802,7 @@ class JDSpider(scrapy.Spider):
 
         for sel2 in response.xpath("//div[@class='sub-menu']/div/div/div"):
             c2 = sel2.xpath("p[1]/text()").extract()[0]
-	    list_kws_c2 = sel2.xpath("p[2]/a/text()").extract()
+            list_kws_c2 = sel2.xpath("p[2]/a/text()").extract()
 #            print c2, list_kws_c2
             for kw in list_kws_c2:
                 list_to_write = [list_c1.index(c2)+1, c2, kw,]
@@ -822,20 +823,20 @@ class JDSpider(scrapy.Spider):
         list_c1 = []
         for i,sel in enumerate(response.xpath("//div[@class='title']/dl")):
             c1 = sel.xpath("dt/text()").extract()[0]
-	    list_c1.append(c1)
-	    list_kws_c1 = sel.xpath("dd/ul/li/a/@title").extract()
-	    for kw in list_kws_c1:
+            list_c1.append(c1)
+            list_kws_c1 = sel.xpath("dd/ul/li/a/@title").extract()
+            for kw in list_kws_c1:
                 list_to_write = [i+1, c1, '', kw]
 #                print list_to_write
                 ws.append(list_to_write)
 #        print list_c1
-	
+
         for i,sel in enumerate(response.xpath("//ul[@class='content']/li/div[1]")):
             for sel2 in sel.xpath("dl"):
                 c2 = sel2.xpath("dt/text()").extract()[0]
                 list_kws_c2 = sel2.xpath("dd/a/text()").extract()
-		for kw in list_kws_c2:
-		    list_to_write = [i+1, list_c1[i], c2, kw]
+                for kw in list_kws_c2:
+                    list_to_write = [i+1, list_c1[i], c2, kw]
 #                    print list_to_write
                     ws.append(list_to_write)
         wb.save(self.path_to_write)
@@ -909,7 +910,7 @@ class JDSpider(scrapy.Spider):
 #                print list_to_write
                 ws.append(list_to_write)
 #        print list_c1
-	
+
         # 得到二级分类名c2及其类别下的关键字列表list_kws_c2
         for i,sel2 in enumerate(response.xpath("//div[@class='sub-menu']/div")):
             for sel3 in sel2.xpath("div/dl"):
@@ -1075,7 +1076,7 @@ class JDSpider(scrapy.Spider):
         # 再将json格式转换为python字典格式
         dict_content = json.loads(pv.locals.json_data)
 #        print dict_content.keys()
-	
+
         # 通过第一个section得到后续一级分类的类名
         list_section_name = []
         for c1 in dict_content['title']:
@@ -1122,7 +1123,7 @@ class JDSpider(scrapy.Spider):
         # 再将json格式转换为python字典格式
         dict_content = json.loads(pv.locals.json_data)
         #print dict_content.keys()
-	
+
         wb = load_workbook(self.path_to_write)
         try:
             wb.remove_sheet(wb[u'手机'])
@@ -1174,7 +1175,7 @@ class JDSpider(scrapy.Spider):
         pv.eval(needed_content + "var json_data = JSON.stringify(d);")
         # 再将json格式转换为python字典格式
         dict_content = json.loads(pv.locals.json_data)
-	
+
         wb = load_workbook(self.path_to_write)
         try:
             wb.remove_sheet(wb[u'家电'])
@@ -1196,7 +1197,7 @@ class JDSpider(scrapy.Spider):
 
         # 仅提取需要的品类
         list_section = ['navThird1', 'navThird2', 'navThird3',
-                'navThird4', 'navThird5', 'navThird6', 'navThird7',]	
+                'navThird4', 'navThird5', 'navThird6', 'navThird7',]
         #print list_section_name
 
         for i,s in enumerate(list_section):
@@ -1209,10 +1210,5 @@ class JDSpider(scrapy.Spider):
 #                    print list_to_write
                     ws.append(list_to_write)
         wb.save(self.path_to_write)
-
-
-
-
-
 
 

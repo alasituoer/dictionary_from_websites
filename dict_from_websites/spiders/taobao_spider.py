@@ -13,7 +13,8 @@ class TaobaoSpider(scrapy.Spider):
     start_urls = ['https://www.taobao.com']
     allowed_domains = ['taobao.com', 'localhost', 'jiyoujia.com',]
 
-    path_to_write = 'data/dict_from_taobao_' +\
+    path_to_write = '/mnt/hgfs/windows_desktop/classification_and_coding/' +\
+            'data/dictionary_building/from_shopping_websites/dict_from_taobao_' +\
             time.strftime("%Y%m%d", time.localtime()) + '.xlsx'
 
     def __init__(self):
@@ -27,37 +28,23 @@ class TaobaoSpider(scrapy.Spider):
         for sel in response.xpath("//ul[@class='service-bd']"):
             list_cate_name = sel.xpath("li/a/text()").extract()
             list_cate_url = sel.xpath("li/a/@href").extract()
-        # 有部分链接缺少'https:', 如: ("//mei.taobao.com"
+
+        # 爬取到的部分链接缺少'https:', 如: "//mei.taobao.com"
         list_cate_url = ['https:'+u if 'http' not in u else u for u in list_cate_url]
-        # (汽车)用品 VS (母婴)用品, 两个用品均可去掉
+
         dict_cate_url = dict(zip(list_cate_name, list_cate_url))
-        dict_cate_url.pop(u'孕产') # 同 童装玩具 而去掉
-        dict_cate_url.pop(u'用品') # 同 童装玩具 而去掉
-        dict_cate_url.pop(u'数码') # 同 家电 而去掉
-        dict_cate_url.pop(u'手机') # 同 家电 而去掉
-        dict_cate_url.pop(u'保健品') # 不常见且没有有效关键字 而去掉
-        dict_cate_url.pop(u'户外') # 同 运动 而去掉
-        dict_cate_url.pop(u'生鲜') # 同 美食 而去掉
-        dict_cate_url.pop(u'零食') # 同 美食 而去掉
+        #print len(list_cate_name)
+
         # 百货的链接指向阿里旗下的一站式家居购物平台jiyoujia
         # 且访问过多会被要求登陆, 不如直接访问"极有家"
         dict_cate_url[u'百货'] = 'https://www.jiyoujia.com'
-#        print len(list_cate_name)
-#        print len(dict_cate_url.keys())
 
-#        for k in dict_cate_url.keys():
-#            if 'http' not in dict_cate_url[k]:
-#                print k, dict_cate_url[k]
-
-        list_cate = [u'女装', u'男装', u'内衣', u'鞋靴', u'箱包', 
-                u'配件', u'童装玩具', u'家电', u'美妆', u'洗护', 
-                u'珠宝', u'眼镜', u'手表', u'运动', u'乐器', 
-                u'美食', u'汽车', u'办公', u'DIY', u'五金电子', 
-                u'百货',]#
-#                u'二手车', u'货厨',
-#                u'家庭保健', u'学习', u'卡券', u'本地服务',]
-#                u'游戏', u'动漫', u'影视', u'鲜花', u'宠物', u'农资', 
-#                u'房产', u'装修', u'家具', u'家饰', u'家纺',
+        list_cate = [# 5个一行 21个大品类
+                u'女装', u'男装', u'内衣', u'鞋靴', u'箱包',
+                u'配件', u'童装玩具', u'家电', u'美妆', u'洗护',
+                u'珠宝', u'眼镜', u'手表', u'运动', u'乐器',
+                u'美食', u'汽车', u'办公', u'DIY', u'五金电子',
+                u'百货',]
         list_method = [self.crawlingNvzhuang, self.crawlingNanzhuang,
                 self.crawlingNeiyi, self.crawlingXie, self.crawlingXiangbao,
                 self.crawlingPei, self.crawlingQbb, self.crawlingTbdc,
@@ -68,9 +55,10 @@ class TaobaoSpider(scrapy.Spider):
                 self.crawlingBaihuo,]
         dict_cate_method = dict(zip(list_cate, list_method))
 
-        # 测试用只取最后一个
+        # 测试时指定一个品类或只取最后一个
 #        for cate_name in [u'内衣']:
 #        for cate_name in list_cate[-1:]:
+        # 正式爬取时则遍历
         for cate_name in list_cate:
             cate_url = dict_cate_url[cate_name]
 #            print cate_name, cate_url
@@ -366,7 +354,7 @@ class TaobaoSpider(scrapy.Spider):
                 ws.append(list_to_write)
         wb.save(self.path_to_write)
 
-	
+
     def crawlingXihuyongpin(self, response):
         """洗护"""
         wb = load_workbook(self.path_to_write)
