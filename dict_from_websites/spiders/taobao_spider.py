@@ -10,8 +10,7 @@ RENDER_HTML_URL = "http://localhost:8050/render.html"
 
 class TaobaoSpider(scrapy.Spider):
     name = 'taobao_spider'
-    start_urls = ['https://www.taobao.com']
-    allowed_domains = ['taobao.com', 'localhost', 'jiyoujia.com',]
+    allowed_domains = ['alicdn.com', 'taobao.com', 'localhost', 'jiyoujia.com',]
 
     path_to_write = '/mnt/hgfs/windows_desktop/classification_and_coding/' +\
             'data/dictionary_building/from_shopping_websites/dict_from_taobao_' +\
@@ -24,7 +23,43 @@ class TaobaoSpider(scrapy.Spider):
             wb = Workbook()
             wb.save(self.path_to_write)
 
+    def start_requests(self):
+        #1 首页的浮动层类别及关键字
+        for u in ['https://tce.alicdn.com/api/data.htm?ids=222887%2C222890%2C222889%2C222886%2C222906%2C222898%2C222907%2C222885%2C222895%2C222878%2C222908%2C222879%2C222893%2C222896%2C222918%2C222917%2C222888%2C222902%2C222880%2C222913%2C222910%2C222882%2C222883%2C222921%2C222899%2C222905%2C222881%2C222911%2C222894%2C222920%2C222914%2C222877%2C222919%2C222915%2C222922%2C222884%2C222912%2C222892%2C222900%2C222923%2C222909%2C222897%2C222891%2C222903%2C222901%2C222904%2C222916%2C222924']:
+            yield scrapy.Request(url=u, callback=self.crawlingHeadfloat)
+
+        #2 首页第一屏左侧品类的链接(子)页面
+        list_urls = ['https://www.taobao.com',]
+        for url in list_urls:
+            yield scrapy.Request(url=url, callback=self.parse)
+
+
+    def crawlingHeadfloat(self, response):
+        """首页浮动展示类别及关键字"""
+        wb = load_workbook(self.path_to_write)
+        try:
+            wb.remove_sheet(wb[u'首页全类别'])
+        except Exception, e:
+            pass
+        ws = wb.create_sheet(title=u'首页全类别')
+
+        json_data = json.loads(response.body)
+        #for idx,cate_index in enumerate(json_data.keys()[23:24]):
+        for idx,cate_index in enumerate(json_data.keys()):
+            json_index = json_data[cate_index]['value']
+            # 由于字典某些键值可能为空, 遇空则跳过
+            try:
+                for kw in json_index['list']:
+                    list_to_write = [idx+1, json_index['head'][0]['name'], kw['name']]
+#                    print repr(list_to_write).decode('unicode-escape')
+                    ws.append(list_to_write)
+            except Exception, e:
+                continue
+        wb.save(self.path_to_write)
+
+
     def parse(self, response):
+        """从首页第一屏的左侧品类, 得到其品类链接, 传递给指定的字页面函数解析"""
         for sel in response.xpath("//ul[@class='service-bd']"):
             list_cate_name = sel.xpath("li/a/text()").extract()
             list_cate_url = sel.xpath("li/a/@href").extract()
