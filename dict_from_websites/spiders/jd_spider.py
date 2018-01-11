@@ -25,6 +25,9 @@ class JDSpider(scrapy.Spider):
             wb.save(self.path_to_write)
 
     def start_requests(self):
+
+#    https://dc.3.cn/category/get
+
         list_urls = ['https://www.jd.com',]
         for url in list_urls:
             yield scrapy.Request(url=url, callback=self.parse)
