@@ -13,10 +13,11 @@ import scrapy
 
 class JDSpider(scrapy.Spider):
     name = 'jd_spider'
+    allowed_domains = ['jd.com', '3.cn',]
     path_to_write = '/mnt/hgfs/windows_desktop/classification_and_coding/' +\
             'data/dictionary_building/from_shopping_websites/dict_from_jd_' +\
             time.strftime("%Y%m%d", time.localtime()) + '.xlsx'
-
+   
     def __init__(self):
         try:
             wb = load_workbook(self.path_to_write)
@@ -25,12 +26,38 @@ class JDSpider(scrapy.Spider):
             wb.save(self.path_to_write)
 
     def start_requests(self):
+        # 抓取首页浮动框全类别及其关键字
+        for u in ['https://dc.3.cn/category/get']:
+            yield scrapy.Request(url=u, callback=self.crawlingHeadfloat)
 
-#    https://dc.3.cn/category/get
-
+        # 抓取首页第一屏左侧访问分类链接后的各子页面
         list_urls = ['https://www.jd.com',]
         for url in list_urls:
             yield scrapy.Request(url=url, callback=self.parse)
+
+    def crawlingHeadfloat(self, response):
+        """首页浮动框内的全类别及其关键字"""
+        wb = load_workbook(self.path_to_write)
+        try:
+            wb.remove_sheet(wb[u'首页全类别'])
+        except Exception, e:
+            pass
+        ws = wb.create_sheet(title=u'首页全类别')
+
+        json_data = eval(response.body.decode('gbk'))
+        list_old = json_data['data']
+        for idx,cates in enumerate(list_old):
+            for c1 in cates['s']:
+                c1_name = c1['n'].split('|')[1].decode('utf-8')
+                for c2 in c1['s']:
+                    c2_name = c2['n'].split('|')[1].decode('utf-8')
+                    for kw in c2['s']:
+                        kw_name = kw['n'].split('|')[1].decode('utf-8')
+                        list_to_write = [idx+1, c1_name, c2_name, kw_name,]
+#                        print repr(list_to_write).decode('unicode-escape')
+                        ws.append(list_to_write)
+        wb.save(self.path_to_write)
+
 
     def parse(self, response):
         for sel in response.xpath("//ul[@class='JS_navCtn cate_menu']"):
