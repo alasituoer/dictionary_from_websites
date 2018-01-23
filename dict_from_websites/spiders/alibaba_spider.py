@@ -19,14 +19,16 @@ class AlibabaSpider(scrapy.Spider):
 
     def start_requests(self):
         list_urls = ['https://www.1688.com',]
-	for url in list_urls:
-	    yield scrapy.Request(url=url, callback=self.parse)
-    
+        for url in list_urls:
+            yield scrapy.Request(url=url, callback=self.parse)
+
     def parse(self, response):
-	dict_cate_url = {}
-	for sel in response.xpath("//ul[@id='sub-nav']/li/a"):
+        dict_cate_url = {}
+        for sel in response.xpath("//ul[@id='sub-nav']/li/a"):
             cate_name = sel.xpath("text()").extract()[0]
-	    cate_url = "https:" + sel.xpath("@href").extract()[0]
+            cate_url = sel.xpath("@href").extract()[0]
+            if 'http' not in cate_url:
+                cate_url = "https:" + sel.xpath("@href").extract()[0]
             dict_cate_url[cate_name] = cate_url
 #        print dict_cate_url
 
@@ -34,14 +36,29 @@ class AlibabaSpider(scrapy.Spider):
         list_methods = [self.crawlingJd, self.crawlingWjgj]
         dict_cate_method = dict(zip(list_cate_tobe_crawled, list_methods))
 
-        for cate_name in list_cate_tobe_crawled[:1]:
+        for cate_name in list_cate_tobe_crawled:
             cate_url = dict_cate_url[cate_name]
-#	    print cate_name, cate_url
+#            print cate_name, cate_url
             yield scrapy.Request(cate_url, callback=dict_cate_method[cate_name])
 
 
     def crawlingWjgj(self, response):
-        pass
+        """五金工具"""
+        wb = load_workbook(self.path_to_write)
+        try:
+            wb.remove_sheet(wb[u'五金工具'])
+        except Exception, e:
+            pass
+        ws = wb.create_sheet(title=u'五金工具')
+
+        for idx,sel in enumerate(response.xpath("//div[@class='ch-menu-body']/div")):
+            c1 = sel.xpath("h3/span/text()").extract()[0]
+            list_kws_c1 = sel.xpath("div/ul/li/a/text()").extract()
+            for kw in list_kws_c1:
+                list_to_write = [idx+1, c1, kw]
+#                print repr(list_to_write).decode("unicode-escape")
+                ws.append(list_to_write)
+        wb.save(self.path_to_write)
 
 
     def crawlingJd(self, response):

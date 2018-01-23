@@ -3,6 +3,8 @@ import scrapy
 import time
 from openpyxl import Workbook, load_workbook
 
+RENDER_HTML_URL = "http://jxdmyx.com:8050/render.html"
+
 class Xdb1688Spider(scrapy.Spider):
     name = "xdb1688_spider"
     allowed_domains = ['1688.com', 'jxdmyx.com',]
@@ -25,58 +27,38 @@ class Xdb1688Spider(scrapy.Spider):
     def parse(self, response):
 	dict_cate_url = {}
 	for sel in response.xpath("//ul[@class='shops-collect']/li"):
-            c1 = sel.xpath("div/text()").extract()[0]
-	    print c1
+            c1_name = sel.xpath("div/text()").extract()[0]
+	    for sel2 in sel.xpath("ul/li"):
+		c2_name = sel2.xpath("a/div[2]/h3/text()").extract()[0]
+		c2_url = sel2.xpath("a/@href").extract()[0]
+		dict_cate_url[c2_name] = c2_url
+#	print dict_cate_url
 
-#        print dict_cate_url
-
-	"""
-        list_cate_tobe_crawled = [u'机械', u'五金工具',]
-        list_methods = [self.crawlingJd, self.crawlingWjgj]
+        list_cate_tobe_crawled = [u'五金店',]
+        list_methods = [self.crawlingWujin,]
         dict_cate_method = dict(zip(list_cate_tobe_crawled, list_methods))
 
         for cate_name in list_cate_tobe_crawled[:1]:
             cate_url = dict_cate_url[cate_name]
+	    cate_url = RENDER_HTML_URL + "?url=" + cate_url + "&timeout=10&wait=2"
 #	    print cate_name, cate_url
-            yield scrapy.Request(cate_url, callback=dict_cate_method[cate_name])
-	"""
+            yield scrapy.Request(url=cate_url, callback=dict_cate_method[cate_name])
 
 
-    def crawlingWjgj(self, response):
-        pass
 
-
-    def crawlingJd(self, response):
-        """机械"""
+    def crawlingWujin(self, response):
+        """五金店"""
         wb = load_workbook(self.path_to_write)
         try:
-            wb.remove_sheet(wb[u'机械'])
+            wb.remove_sheet(wb[u'五金店'])
         except Exception, e:
             pass
-        ws = wb.create_sheet(title=u'机械')
+        ws = wb.create_sheet(title=u'五金店')
 
-        # 左侧导航栏
-        list_c1 = []
-        for idx,sel in enumerate(response.xpath(
-                "//div[@class='ch-menu-body']/div[@class='ch-menu-item']")):
-            c1 = sel.xpath("h3/span/text()").extract()[0]
-            list_c1.append(c1)
-            list_kws_c1 = sel.xpath("div/ul/li/a/text()").extract()
-            for kw in list_kws_c1:
-                list_to_write = [idx+1, c1, '', kw,]
-#                print repr(list_to_write).decode('unicode-escape')
-                ws.append(list_to_write)
-
-        # 悬浮隐藏框
-        for idx,sel in enumerate(response.xpath(
-                "//div[@class='ch-menu-layer']/div/div")):
-            for sel2 in sel.xpath("div"):
-                c2 = sel2.xpath("h4/text()").extract()[0]
-                list_kws_c2 = sel2.xpath("div/ul/li/a/text()").extract()
-                for kw in list_kws_c2:
-                    list_to_write = [idx+1, list_c1[idx], c2, kw,]
-#                    print repr(list_to_write).decode('unicode-escape')
-                    ws.append(list_to_write)
-        wb.save(self.path_to_write)
-
+	for sel in response.xpath("//ul[@class='xdb-goods-shelf-list fd-clr']/li"):
+	    cate_name = sel.xpath("a/div/div[2]/text()").extract()[0]
+	    localid = sel.xpath("@data-spm-click").extract()[0]
+	    shelfResourceTags = localid.split(';')[-2]
+	    print cate_name, shelfResourceTags[10:]
+	    print "无法正确提取小店宝的品类下关键字"
 
