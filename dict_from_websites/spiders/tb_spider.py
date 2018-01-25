@@ -4,58 +4,46 @@ import numpy as np
 import time
 import json
 from openpyxl import Workbook, load_workbook
+from dict_from_websites.items import DictFromWebsitesItem
 
 
-RENDER_HTML_URL = "http://localhost:8050/render.html"
+RENDER_HTML_URL = "http://jxdmyx.com:8050/render.html"
 
 class TaobaoSpider(scrapy.Spider):
-    name = 'taobao_spider'
-    allowed_domains = ['alicdn.com', 'taobao.com', 'localhost', 'jiyoujia.com',]
-
-    path_to_write = '/mnt/hgfs/windows_desktop/classification_and_coding/' +\
-            'data/dictionary_building/from_shopping_websites/dict_from_taobao_' +\
-            time.strftime("%Y%m%d", time.localtime()) + '.xlsx'
-
-    def __init__(self):
-        try:
-            wb = load_workbook(self.path_to_write)
-        except Exception, e:
-            wb = Workbook()
-            wb.save(self.path_to_write)
+    name = 'tb_spider'
+    allowed_domains = ['alicdn.com', 'taobao.com', 'jxdmyx.com', 'jiyoujia.com',]
+    path_to_write = "/mnt/hgfs/windows_desktop/classification_and_coding/" +\
+            "data/dictionary_building/from_shopping_websites/raw_data_crawled/" +\
+            "dict_from_tb_" + time.strftime("%Y%m%d", time.localtime()) + ".xlsx"
 
     def start_requests(self):
         #1 首页的浮动层类别及关键字
-        for u in ['https://tce.alicdn.com/api/data.htm?ids=222887%2C222890%2C222889%2C222886%2C222906%2C222898%2C222907%2C222885%2C222895%2C222878%2C222908%2C222879%2C222893%2C222896%2C222918%2C222917%2C222888%2C222902%2C222880%2C222913%2C222910%2C222882%2C222883%2C222921%2C222899%2C222905%2C222881%2C222911%2C222894%2C222920%2C222914%2C222877%2C222919%2C222915%2C222922%2C222884%2C222912%2C222892%2C222900%2C222923%2C222909%2C222897%2C222891%2C222903%2C222901%2C222904%2C222916%2C222924']:
-            yield scrapy.Request(url=u, callback=self.crawlingHeadfloat)
+#        url = 'https://tce.alicdn.com/api/data.htm?ids=222887%2C222890%2C222889%2C222886%2C222906%2C222898%2C222907%2C222885%2C222895%2C222878%2C222908%2C222879%2C222893%2C222896%2C222918%2C222917%2C222888%2C222902%2C222880%2C222913%2C222910%2C222882%2C222883%2C222921%2C222899%2C222905%2C222881%2C222911%2C222894%2C222920%2C222914%2C222877%2C222919%2C222915%2C222922%2C222884%2C222912%2C222892%2C222900%2C222923%2C222909%2C222897%2C222891%2C222903%2C222901%2C222904%2C222916%2C222924'
+#        yield scrapy.Request(url=url, callback=self.crawlingHeadfloat)
 
         #2 首页第一屏左侧品类的链接(子)页面
-#        list_urls = ['https://www.taobao.com',]
-#        for url in list_urls:
-#            yield scrapy.Request(url=url, callback=self.parse)
+        yield scrapy.Request(url='https://www.taobao.com', callback=self.parse)
 
 
     def crawlingHeadfloat(self, response):
         """首页浮动展示类别及关键字"""
-        wb = load_workbook(self.path_to_write)
-        try:
-            wb.remove_sheet(wb[u'首页全类别'])
-        except Exception, e:
-            pass
-        ws = wb.create_sheet(title=u'首页全类别')
+
+        item = DictFromWebsitesItem()
+        item['sheetname'] = u'首页'
 
         json_data = json.loads(response.body)
         #for idx,cate_index in enumerate(json_data.keys()[23:24]):
         for idx,cate_index in enumerate(json_data.keys()):
             json_index = json_data[cate_index]['value']
-            # 由于字典某些键值可能为空, 遇空则跳过
-            try:
+	    item['idx'] = idx + 1
+            item['c1'] = json_index['head'][0]['name']
+            try:# 由于字典某些键值可能为空, 遇空则跳过
                 for kw in json_index['list']:
-                    list_to_write = [idx+1, json_index['head'][0]['name'], kw['name']]
-#                    print repr(list_to_write).decode('unicode-escape')
-                    ws.append(list_to_write)
+                    item['kw'] = kw['name']
+#                    print repr(item).decode('unicode-escape')
+                    yield item
             except Exception, e:
                 continue
-        wb.save(self.path_to_write)
 
 
 
@@ -93,23 +81,18 @@ class TaobaoSpider(scrapy.Spider):
 
         # 测试时指定一个品类或只取最后一个
 #        for cate_name in [u'内衣']:
-#        for cate_name in list_cate[-1:]:
+        for cate_name in list_cate[-2:-1]:
         # 正式爬取时则遍历
-        for cate_name in list_cate:
+#        for cate_name in list_cate:
             cate_url = dict_cate_url[cate_name]
-#            print cate_name, cate_url
+            print cate_name, cate_url
             cate_url = RENDER_HTML_URL + "?url=" + cate_url + "&timeout=10&wait=2"
             yield scrapy.Request(url=cate_url, callback=dict_cate_method[cate_name])
 
 
     def crawlingBaihuo(self, response):
-        """百货"""
-        wb = load_workbook(self.path_to_write)
-        try:
-            wb.remove_sheet(wb[u'百货'])
-        except Exception, e:
-            pass
-        ws = wb.create_sheet(title=u'百货')
+        item = DictFromWebsitesItem()
+	item['sheetname'] = u'百货'
 
         # 得到一级分类名
         for sel in response.xpath("//ul[@class='sub-menus clearfix']"):
@@ -121,38 +104,35 @@ class TaobaoSpider(scrapy.Spider):
         # 所以重新指定response.body, 重新解析网页得到所需内容
         for idx,sel in enumerate(response.xpath(
                 "//textarea[@class='J_Sub_Menu_Content']")):
+	    item['idx'] = idx+1
+	    item['c1'] = list_c1[idx]
+
             res2 = response.replace(body=sel.xpath("text()").extract()[0])
-            # 显式复制
             for sel2 in res2.xpath("//div[@class='col-block-wrap']"):
-                #c2 = sel2.xpath("a/img/@alt").extract()[0]
-                c2 = sel2.xpath("a/text()").extract()[0]
+                #item['c2'] = sel2.xpath("a/img/@alt").extract()[0]
+                item['c2'] = sel2.xpath("a/text()").extract()[0]
                 for sel3 in sel2.xpath("ul[@class='server-list clearfix']/li"):
-                    list_kws_c2 =  sel3.xpath("a/text()").extract()[0]
-                    list_to_write = [idx+1, list_c1[idx], c2, list_kws_c2]
-#                    print repr(list_to_write).decode('unicode-escape')
-                    ws.append(list_to_write)
-        wb.save(self.path_to_write)
+		    item['kw'] = sel3.xpath("a/text()").extract()[0]
+		    yield item
 
 
     def crawlingWujin(self, response):
-        """五金电子"""
-        wb = load_workbook(self.path_to_write)
-        try:
-            wb.remove_sheet(wb[u'五金电子'])
-        except Exception, e:
-            pass
-        ws = wb.create_sheet(title=u'五金电子')
+        items = DictFromWebsitesItem()
+	items['sheetname'] = u'五金电子'
 
         # 第一屏左侧分类(7个, 少于下述的9个
         # 所以不能在此得到list_c1做下述的大类别名匹配)
-        for sel in response.xpath("//div[@class='sub-d-menu']/dl"):
-            c1 = sel.xpath("dt/text()").extract()[0]
+        for idx,sel in enumerate(response.xpath("//div[@class='sub-d-menu']/dl")):
+	    items['idx'] = idx+1
+            items['c1'] = sel.xpath("dt/text()").extract()[0]
+	    items['c2'] = ''
             list_kws_c1 = sel.xpath("dd/a/text()").extract()
             for kw in list_kws_c1:
-                list_to_write = ['', c1, '', kw]
-#                print repr(list_to_write).decode('unicode-escape')
-                ws.append(list_to_write)
+		items['kw'] = kw
+		yield items
 
+        items = DictFromWebsitesItem()
+	items['sheetname'] = u'五金电子'
         # 往下滚动左侧细分类
         # 左侧的(9个)类别名是图片, 需要单独提取
         list_c1 = []
@@ -162,20 +142,22 @@ class TaobaoSpider(scrapy.Spider):
 #        print repr(list_c1).decode('unicode-escape')
         # 再提取关键字
         for idx,sel in enumerate(response.xpath("//textarea[@class='J_Dynamic_Data']")):
+	    items['idx'] = idx+1
+	    items['c1'] = list_c1[idx]
+
             dict_old = eval(sel.xpath("text()").extract()[0].strip())
             list_needed = dict_old['textlink'][0]['text']
 #            print json.dumps(list_needed, indent=1)
             for c2 in list_needed:
                 for kw in c2['texts']:
-                    list_to_write = [idx+1, list_c1[idx], c2['name'].decode('utf-8'), 
-                            kw['cat_name'].decode('utf-8')]
-#                    print repr(list_to_write).decode('unicode-escape')
-                    ws.append(list_to_write)
-        wb.save(self.path_to_write)
+		    items['c2'] = c2['name'].decode('utf-8')
+		    items['kw'] = kw['cat_name'].decode('utf-8')
+		    yield items
 
 
     def crawlingDingzhi(self, response):
         """DIY (定制)"""
+	print "hello alas"
         wb = load_workbook(self.path_to_write)
         try:
             wb.remove_sheet(wb[u'DIY'])
